@@ -28,7 +28,7 @@
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 
-#define VERSION "0.7"
+#define VERSION "0.6"
 
 static bool disable_scofix;
 static bool force_scofix;
@@ -2264,7 +2264,7 @@ static int btusb_probe(struct usb_interface *intf,
 	BT_DBG("intf %p id %p", intf, id);
 
 	/* interface numbers are hardcoded in the spec */
-	if (intf->cur_altsetting->desc.bInterfaceNumber != 2)
+	if (intf->cur_altsetting->desc.bInterfaceNumber != 0)
 		return -ENODEV;
 
 	if (!id->driver_info) {
@@ -2377,7 +2377,7 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 	/* Interface numbers are hardcoded in the specification */
-	data->isoc = usb_ifnum_to_if(data->udev, 3);
+	data->isoc = usb_ifnum_to_if(data->udev, 1);
 
 	if (!reset)
 		set_bit(HCI_QUIRK_RESET_ON_CLOSE, &hdev->quirks);
