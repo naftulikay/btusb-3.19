@@ -51,6 +51,7 @@ static struct usb_driver btusb_driver;
 #define BTUSB_MARVELL		0x800
 #define BTUSB_QCA_ROME		0x8000
 #define BTUSB_BCM_APPLE		0x10000
+#define BTUSB_IFNUM_2		0x80000
 
 static const struct usb_device_id btusb_table[] = {
 	/* Generic Bluetooth USB device */
@@ -1154,7 +1155,6 @@ static inline int __set_isoc_interface(struct hci_dev *hdev, int altsetting)
 	struct btusb_data *data = hci_get_drvdata(hdev);
 	struct usb_interface *intf = data->isoc;
 	struct usb_endpoint_descriptor *ep_desc;
-	unsigned ifnum_base;
 	int i, err;
 
 	if (!data->isoc)
@@ -2262,6 +2262,7 @@ static int btusb_probe(struct usb_interface *intf,
 	struct usb_endpoint_descriptor *ep_desc;
 	struct btusb_data *data;
 	struct hci_dev *hdev;
+	unsigned ifnum_base;
 	int i, err;
 
 	BT_DBG("intf %p id %p", intf, id);
