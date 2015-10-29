@@ -3,6 +3,8 @@
 *.ko
 *.obj
 *.elf
+.*.o.cmd
+.*.ko.cmd
 
 # Precompiled Headers
 *.gch
@@ -30,3 +32,5 @@
 
 # Debug files
 *.dSYM/
+Module.symvers
+modules.order

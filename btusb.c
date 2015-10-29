@@ -28,7 +28,7 @@
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
 
-#define VERSION "0.6"
+#define VERSION "0.7"
 
 static bool disable_scofix;
 static bool force_scofix;
@@ -50,13 +50,15 @@ static struct usb_driver btusb_driver;
 #define BTUSB_BCM_PATCHRAM	0x400
 #define BTUSB_MARVELL		0x800
 #define BTUSB_QCA_ROME		0x8000
+#define BTUSB_BCM_APPLE		0x10000
 
 static const struct usb_device_id btusb_table[] = {
 	/* Generic Bluetooth USB device */
 	{ USB_DEVICE_INFO(0xe0, 0x01, 0x01) },
 
 	/* Apple-specific (Broadcom) devices */
-	{ USB_VENDOR_AND_INTERFACE_INFO(0x05ac, 0xff, 0x01, 0x01) },
+	{ USB_VENDOR_AND_INTERFACE_INFO(0x05ac, 0xff, 0x01, 0x01),
+		.driver_info = BTUSB_BCM_APPLE | BTUSB_IFNUM_2 },
 
 	/* MediaTek MT76x0E */
 	{ USB_DEVICE(0x0e8d, 0x763f) },
@@ -1152,6 +1154,7 @@ static inline int __set_isoc_interface(struct hci_dev *hdev, int altsetting)
 	struct btusb_data *data = hci_get_drvdata(hdev);
 	struct usb_interface *intf = data->isoc;
 	struct usb_endpoint_descriptor *ep_desc;
+	unsigned ifnum_base;
 	int i, err;
 
 	if (!data->isoc)
@@ -2264,8 +2267,14 @@ static int btusb_probe(struct usb_interface *intf,
 	BT_DBG("intf %p id %p", intf, id);
 
 	/* interface numbers are hardcoded in the spec */
-	if (intf->cur_altsetting->desc.bInterfaceNumber != 0)
-		return -ENODEV;
+	if (intf->cur_altsetting->desc.bInterfaceNumber != 0) {
+		if (!(id->driver_info & BTUSB_IFNUM_2))
+			return -ENODEV;
+		if (intf->cur_altsetting->desc.bInterfaceNumber != 2)
+			return -ENODEV;
+    }
+
+	ifnum_base = intf->cur_altsetting->desc.bInterfaceNumber;
 
 	if (!id->driver_info) {
 		const struct usb_device_id *match;
@@ -2352,9 +2361,20 @@ static int btusb_probe(struct usb_interface *intf,
 		hdev->setup = btusb_setup_bcm92035;
 
 	if (id->driver_info & BTUSB_BCM_PATCHRAM) {
+		hdev->manufacturer = 15;
 		hdev->setup = btusb_setup_bcm_patchram;
+		hdev->set_diag = btusb_bcm_set_diag;
 		hdev->set_bdaddr = btusb_set_bdaddr_bcm;
 		set_bit(HCI_QUIRK_STRICT_DUPLICATE_FILTER, &hdev->quirks);
+	}
+
+	if (id->driver_info & BTUSB_BCM_APPLE) {
+		hdev->manufacturer = 15;
+		hdev->setup = btbcm_setup_apple;
+		hdev->set_diag = btusb_bcm_set_diag;
+
+        /* Broadcom LM_DIAG Interface numbers are hardcoded */
+		data->diag = usb_ifnum_to_if(data->udev, ifnum_base + 2);
 	}
 
 	if (id->driver_info & BTUSB_INTEL) {
@@ -2377,7 +2397,7 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 	/* Interface numbers are hardcoded in the specification */
-	data->isoc = usb_ifnum_to_if(data->udev, 1);
+	data->isoc = usb_ifnum_to_if(data->udev, ifnum_base + 1);
 
 	if (!reset)
 		set_bit(HCI_QUIRK_RESET_ON_CLOSE, &hdev->quirks);
