@@ -2364,18 +2364,12 @@ static int btusb_probe(struct usb_interface *intf,
 	if (id->driver_info & BTUSB_BCM_PATCHRAM) {
 		hdev->manufacturer = 15;
 		hdev->setup = btusb_setup_bcm_patchram;
-		hdev->set_diag = btusb_bcm_set_diag;
 		hdev->set_bdaddr = btusb_set_bdaddr_bcm;
 		set_bit(HCI_QUIRK_STRICT_DUPLICATE_FILTER, &hdev->quirks);
 	}
 
 	if (id->driver_info & BTUSB_BCM_APPLE) {
 		hdev->manufacturer = 15;
-		hdev->setup = btbcm_setup_apple;
-		hdev->set_diag = btusb_bcm_set_diag;
-
-        /* Broadcom LM_DIAG Interface numbers are hardcoded */
-		data->diag = usb_ifnum_to_if(data->udev, ifnum_base + 2);
 	}
 
 	if (id->driver_info & BTUSB_INTEL) {
@@ -2398,7 +2392,11 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 	/* Interface numbers are hardcoded in the specification */
-	data->isoc = usb_ifnum_to_if(data->udev, ifnum_base + 1);
+	if (hdev->manufacturer == 15) {
+		data->isoc = usb_ifnum_to_if(data->udev, ifnum_base + 2);
+	} else {
+		data->isoc = usb_ifnum_to_if(data->udev, ifnum_base + 1);
+	}
 
 	if (!reset)
 		set_bit(HCI_QUIRK_RESET_ON_CLOSE, &hdev->quirks);
